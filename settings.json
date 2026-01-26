@@ -1,0 +1,24 @@
+{
+  "name": "gws_microbial_genomics",
+  "author": "",
+  "version": "0.1.0",
+  "variables": {
+    "gws_microbial_genomics:testdata_dir": "${CURRENT_DIR}/tests/testdata"
+  },
+  "technical_info": null,
+  "environment": {
+    "bricks": [
+      {
+        "name": "gws_core",
+        "version": "0.19.3"
+      }
+    ],
+    "pip": [
+      {
+        "source": "https://pypi.python.org/simple",
+        "packages": []
+      }
+    ],
+    "git": []
+  }
+}
