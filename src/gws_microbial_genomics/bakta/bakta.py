@@ -94,9 +94,9 @@ def _write_replicons_for_all(
 
     tsv = out_dir / "replicons_all.tsv"
     with tsv.open("wt", encoding="utf-8") as w:
-        w.write("original_id\tlength\tnew_id\ttype\ttopology\tname\n")
+        w.write("original_id\tnew_id\ttype\ttopology\tname\n")
         for cid, clen in rows:
-            w.write(f"{cid}\t{clen}\t{cid}\t{rtype}\t{rtopo}\t\n")
+            w.write(f"{cid}\t{cid}\t{rtype}\t{rtopo}\t\n")
     return tsv
 
 
@@ -222,6 +222,19 @@ class BaktaTask(Task):
             raise RuntimeError("Bakta DB path invalid: could not find version.json in folder or db/db-full/db-light")
         print(f"[INFO] Using Bakta DB at: {db_dir}")
 
+        # Ensure AMRFinderPlus DB is indexed by the current env's amrfinder binary.
+        # This is necessary when the DB was installed from a different conda env
+        # (each env has its own amrfinder binary that generates incompatible indexes).
+        amr_db = db_dir / "amrfinderplus-db"
+        if amr_db.is_dir():
+            print(f"[INFO] Updating AMRFinderPlus DB indexes for current env: {amr_db}")
+            rc_amr = shell.run(
+                f"amrfinder_update --force_update --database {amr_db}",
+                shell_mode=True
+            )
+            if rc_amr != 0:
+                print("[WARN] amrfinder_update failed — bakta may fail on AMR annotation")
+
         # Map translation table description → numeric code
         tt = TRANSLATION_TABLE_MAP.get(params["translation_table"], "11")
         gram = params["gram"] if params["gram"] in {"+", "-", "?"} else "?"
@@ -269,12 +282,20 @@ class BaktaTask(Task):
 
         cmd_parts.append(f"\"{fasta.path}\"")  # FASTA last
 
-        cmd = " ".join(cmd_parts)
+        # Capture stdout+stderr for diagnostics
+        output_log = out_dir / "bakta_output.log"
+        cmd = " ".join(cmd_parts) + f" >{output_log} 2>&1"
         print("[DEBUG]", cmd)
 
         # Run
-        if shell.run(cmd, shell_mode=True):
-            raise RuntimeError("Bakta annotation failed")
+        rc = shell.run(cmd, shell_mode=True)
+        if rc != 0:
+            # Print log so it's visible in test output
+            try:
+                err_txt = output_log.read_text(encoding="utf-8", errors="replace") if output_log.is_file() else "(no output log)"
+            except Exception:
+                err_txt = "(could not read output log)"
+            raise RuntimeError(f"Bakta annotation failed (rc={rc}).\nOUTPUT:\n{err_txt}")
 
         # ----------------- collect into ResourceSet -----------------
         rs = ResourceSet()

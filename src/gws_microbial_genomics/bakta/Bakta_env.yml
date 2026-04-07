@@ -1,4 +1,4 @@
-name: .picrust2
+name: .bakta_env
 channels:
   - bioconda
   - conda-forge

@@ -106,21 +106,16 @@ def write_nfconfig_ignore_dumpsoftwareversions(path: Path) -> None:
     )
 
 
-# Official-ish runtype values used by Bactopia prepare/docs in samplesheet mode
+# Only the runtype values you want to expose
 VALID_RUNTYPES = {
     "paired-end",
     "single-end",
     "ont",
     "hybrid",
     "short_polish",
-    "merge-pe",
-    "hybrid-merge-pe",
-    "short_polish-merge-pe",
-    "merge-se",
-    "assembly",
 }
 
-# Accept user/legacy variants, normalize to prepare-style naming
+# Accept user/legacy variants, normalize to canonical naming
 ALIASES = {
     "paired": "paired-end",
     "pe": "paired-end",
@@ -143,7 +138,6 @@ def normalize_runtype(rt: str) -> str:
         norm in VALID_RUNTYPES,
         f"Samplesheet: runtype invalide '{rt}'. Valeurs supportées: {', '.join(sorted(VALID_RUNTYPES))}",
     )
-    # IMPORTANT: we DO NOT accept ambiguous "paired-end and ont" in runtype.
     if "paired" in norm and "ont" in norm:
         raise RuntimeError(
             "Samplesheet: runtype ambigu (contient à la fois paired et ont). "
@@ -189,34 +183,32 @@ def resolve_samplesheet(in_tsv: Path, out_tsv: Path, fastq_folder: Path) -> None
         r2 = (cols[idx["r2"]] or "").strip() if has_r2 else ""
         extra = (cols[idx["extra"]] or "").strip() if has_extra else ""
 
-        # ---- Validate by runtype (Bactopia rules in samplesheet mode) ----
-        if rt in {"paired-end", "merge-pe"}:
+        # Validate by runtype
+        if rt == "paired-end":
             _require(r1 != "", f"Samplesheet: r1 manquant (ligne {li})")
             _require(has_r2 and r2 != "", f"Samplesheet: r2 manquant pour runtype '{rt}' (ligne {li})")
-            # extra usually empty; we don't hard-fail, but it's suspicious
-        elif rt in {"single-end", "merge-se"}:
+
+        elif rt == "single-end":
             _require(r1 != "", f"Samplesheet: r1 manquant (ligne {li})")
             _require(r2 == "", f"Samplesheet: r2 doit être vide pour runtype '{rt}' (ligne {li})")
+
         elif rt == "ont":
-            # ONT-only: reads are in r1 (per prepare example)
             _require(r1 != "", f"Samplesheet: r1 (ONT) manquant (ligne {li})")
             _require(r2 == "", f"Samplesheet: r2 doit être vide pour runtype 'ont' (ligne {li})")
-            # extra should be empty for ont-only
-        elif rt in {"hybrid", "short_polish", "hybrid-merge-pe", "short_polish-merge-pe"}:
+
+        elif rt in {"hybrid", "short_polish"}:
             _require(r1 != "", f"Samplesheet: r1 manquant (ligne {li})")
             _require(has_r2 and r2 != "", f"Samplesheet: r2 manquant pour runtype '{rt}' (ligne {li})")
             _require(has_extra and extra != "", f"Samplesheet: extra (ONT) manquant pour runtype '{rt}' (ligne {li})")
-        elif rt == "assembly":
-            _require(has_extra and extra != "", f"Samplesheet: extra (assembly) manquant pour runtype 'assembly' (ligne {li})")
 
-        # ---- Check missing files ----
+        # Check missing files
         missing_all += _collect_missing_files(r1, fastq_folder)
         if has_r2:
             missing_all += _collect_missing_files(r2, fastq_folder)
         if has_extra:
             missing_all += _collect_missing_files(extra, fastq_folder)
 
-        # ---- Resolve paths ----
+        # Resolve paths
         if r1:
             cols[idx["r1"]] = _resolve_cell(r1, fastq_folder)
         if has_r2 and r2:
@@ -294,8 +286,6 @@ def main():
     if str(a.coverage).strip():
         cmd += ["--coverage", str(a.coverage).strip()]
 
-    # NOTE: no --ont / no --short_polish / no --hybrid here.
-    # Those are driven by per-row 'runtype' in the samplesheet.
     run_bactopia(cmd, env)
 
 

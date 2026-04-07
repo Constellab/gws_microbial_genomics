@@ -39,82 +39,80 @@ class BactopiaRun(Task):
     - Report aggregation (e.g., MultiQC)
 
     > Bactopia is designed for **one isolate per sample**.
-    > It is **not** a metagenomics pipeline for complex multi-species mixtures (e.g., raw soil samples).
+    > It is **not** a metagenomics pipeline for complex multi-species mixtures.
 
     ---
 
     ## Inputs
 
-    ### 1) FASTQ reads
-    Bactopia supports the following sequencing inputs:
-    - **Illumina Paired-End (PE)**: `R1` + `R2`
-    - **Illumina Single-End (SE)**: `R1` only
-    - **Oxford Nanopore (ONT)**: long reads (usually one FASTQ)
+    This task runs Bactopia from:
+    - a **portable samplesheet**
+    - a **FASTQ folder**
 
-    ### 2) Samplesheet (TSV)
-    For multi-sample runs, Bactopia takes a **tab-separated samplesheet** describing one sample per row.
+    The samplesheet format documented below is the **wrapper-specific format expected by this task**.
+    It is converted internally into a Bactopia-compatible `--samples` file.
+
+    ### Supported sequencing inputs
+    - **Illumina Paired-End (PE)**: `r1` + `r2`
+    - **Illumina Single-End (SE)**: `r1` only
+    - **Oxford Nanopore (ONT)**: `r1` only
+    - **Hybrid Illumina + ONT**: `r1` + `r2` + `extra`
 
     ---
 
     ## Samplesheet format
 
-    ### Required columns (minimum)
+    ### Required columns
     - `sample`: sample / isolate ID
-    - `runtype`: how Bactopia should interpret the row
-    - `r1`: read 1 FASTQ path (or comma-separated list)
-    - `r2`: read 2 FASTQ path (or comma-separated list, required for PE/hybrid modes)
+    - `runtype`: one of `paired-end`, `single-end`, `ont`, `hybrid`, `short_polish`
+    - `r1`: read 1 FASTQ filename (required for all supported runtype values)
 
-    ### Optional column
-    - `extra`: **either** long reads (ONT) **or** a precomputed assembly, depending on `runtype`
+    ### Conditionally required columns
+    - `r2`: required for `paired-end`, `hybrid`, `short_polish`
+    - `extra`: required for `hybrid`, `short_polish` and contains ONT long reads
 
     ---
 
     ## `runtype` values and meaning
 
-    `runtype` is the **key** field: it selects the input interpretation and assembly strategy.
+    `runtype` selects how the row is interpreted.
 
-    Common supported values:
     - `paired-end`
-    Illumina Paired-End. Uses `r1` and `r2`.
+    Illumina paired-end input. Uses `r1` and `r2`.
 
     - `single-end`
-    Illumina Single-End. Uses `r1` only.
+    Illumina single-end input. Uses `r1` only. `r2` must be empty.
 
     - `ont`
-    ONT long reads only. In many wrappers, the ONT FASTQ is stored in `r1` and `r2` is empty.
+    ONT-only input. Uses `r1` only. `r2` must be empty.
 
     - `hybrid`
-    Illumina PE + ONT. Uses `r1`+`r2` (Illumina) and `extra` (ONT).
-    Hybrid assembly approach: **short reads first**, then long reads bridge gaps (commonly via Unicycler).
+    Illumina paired-end + ONT input. Uses `r1` + `r2` for Illumina reads and `extra` for ONT reads.
 
     - `short_polish`
-    Illumina PE + ONT. Uses `r1`+`r2` (Illumina) and `extra` (ONT).
-    Hybrid assembly with short-read polishing: **long reads first**, then polish with short reads (often better for modern ONT data).
+    Illumina paired-end + ONT input. Uses `r1` + `r2` for Illumina reads and `extra` for ONT reads, with short-read polishing workflow.
 
-    > Important: **Hybrid choice is explicit**.
-    > The user selects `hybrid` or `short_polish` in the samplesheet. No auto-selection.
+    > Hybrid choice is explicit.
+    > The user must set `runtype=hybrid` or `runtype=short_polish`.
 
     ---
 
-    ## Column semantics (`r1`, `r2`, `extra`)
+    ## Column semantics
 
     ### `r1`
-    - Always required.
-    - For `paired-end`: Illumina R1 FASTQ(s).
-    - For `single-end`: Illumina SE FASTQ(s).
-    - For `ont`: ONT FASTQ(s), if your wrapper uses `r1` as the ONT container.
+    - Always required
+    - `paired-end`: Illumina R1 FASTQ
+    - `single-end`: Illumina single-end FASTQ
+    - `ont`: ONT FASTQ
+    - `hybrid` / `short_polish`: Illumina R1 FASTQ
 
     ### `r2`
-    - Required only for `paired-end`, `hybrid`, `short_polish`.
-    - Must be empty for `single-end` and typically empty for `ont`.
+    - Required only for `paired-end`, `hybrid`, `short_polish`
+    - Must be empty for `single-end` and `ont`
 
     ### `extra`
-    Per Bactopia documentation:
-    > **extra**: Either the assembly or long reads associated with a sample
-
-    Practical usage:
-    - `hybrid` / `short_polish`: `extra` contains the **ONT long reads** for that same sample.
-    - `assembly`: `extra` may contain a pre-built assembly FASTA (if your workflow supports it).
+    - Required only for `hybrid` and `short_polish`
+    - Contains the ONT long reads associated with the same sample
 
     ---
 
@@ -125,21 +123,21 @@ class BactopiaRun(Task):
     - You want a classic short-read-first hybrid approach
 
     ### Use `short_polish` when:
-    - ONT data is **modern** and **high coverage**
-    - You want long-read-first assembly with short-read polishing (often faster/better)
+    - ONT data is modern and high coverage
+    - You want long-read-first assembly with short-read polishing
 
     ---
 
-    ## Example samplesheet (mixed run)
+    ## Example samplesheet
 
-    ```tsv
     sample	runtype	r1	r2	extra
-    sample1	paired-end	sample1_1.fastq.gz	sample1_2.fastq.gz
-    sample2	paired-end	sample2_1.fastq.gz	sample2_2.fastq.gz
+    sample1	paired-end	sample1_R1.fastq.gz	sample1_R2.fastq.gz
+    sample2	single-end	sample2.fastq.gz
     sample3	ont	sample3.fastq.gz
-    EcoliHybrid	short_polish	Ecoli_R1.fastq.gz	Ecoli_R2.fastq.gz	Ecoli_ont.fastq.gz
-
+    EcoliHybrid	hybrid	Ecoli_R1.fastq.gz	Ecoli_R2.fastq.gz	Ecoli_ont.fastq.gz
+    EcoliPolish	short_polish	EcoliPolish_R1.fastq.gz	EcoliPolish_R2.fastq.gz	EcoliPolish_ont.fastq.gz
     """
+
     input_specs: Final[InputSpecs] = InputSpecs(
         {
             "samplesheet": InputSpec(File, human_name="Portable samplesheet (TSV)"),
