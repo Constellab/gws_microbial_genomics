@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+from gws_core.config.param.select_param import SelectParam
 from pathlib import Path
 from typing import Final
 
@@ -51,9 +52,9 @@ class BactopiaMetadata(Task):
             ),
             "pe1_pattern": StrParam(default_value="", short_description="Pattern for mate 1 token (1,R1,r1)"),
             "pe2_pattern": StrParam(default_value="", short_description="Pattern for mate 2 token (2,r2,R2)"),
-            "ont": StrParam(
+            "ont": SelectParam(
                 default_value="false",
-                allowed_values=["false", "true"],
+                options=["false", "true"],
                 short_description="Treat single-end reads as Oxford Nanopore reads",
             ),
         }
