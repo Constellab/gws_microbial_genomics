@@ -4,6 +4,7 @@
 # The use and distribution of this software is prohibited without the prior consent of Gencovery SAS.
 # About us: https://gencovery.com
 
+from gws_core.config.param.select_param import SelectParam
 import os
 from pathlib import Path
 from typing import Optional, List, Tuple, Final
@@ -170,27 +171,27 @@ class BaktaTask(Task):
 
         # Filters / settings
         "min_contig_len": IntParam(default_value=1, min_value=1, short_description="Minimum contig length"),
-        "translation_table": StrParam(
+        "translation_table": SelectParam(
             default_value=TRANSLATION_TABLE_CHOICES[0],
-            allowed_values=TRANSLATION_TABLE_CHOICES,
+            options=TRANSLATION_TABLE_CHOICES,
             short_description=(
                 "Genetic code used for translation:\n"
                 f"- {TRANSLATION_TABLE_CHOICES[0]} (NCBI 11)\n"
                 f"- {TRANSLATION_TABLE_CHOICES[1]} (NCBI 4)"
             )
         ),
-        "gram": StrParam(
-            default_value="?", allowed_values=["+", "-", "?"],
+        "gram": SelectParam(
+            default_value="?", options=["+", "-", "?"],
             short_description="Gram type: + (diderm), - (monoderm), ? (unknown)"
         ),
 
         # Global replicon metadata (optional; applied to all contigs if set)
-        "replicon_type": StrParam(
-            default_value=None, allowed_values=["chromosome", "plasmid", " "],
+        "replicon_type": SelectParam(
+            default_value=None, options=["chromosome", "plasmid", " "],
             short_description="Apply a global replicon Type to all contigs (optional)"
         ),
-        "replicon_topology": StrParam(
-            default_value=None, allowed_values=["circular", "linear", " "],
+        "replicon_topology": SelectParam(
+            default_value=None, options=["circular", "linear", " "],
             short_description="Apply a global Topology to all contigs (optional)"
         ),
 

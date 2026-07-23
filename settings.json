@@ -1,7 +1,7 @@
 {
   "name": "gws_microbial_genomics",
   "author": "",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "variables": {
     "gws_microbial_genomics:testdata_dir": "${CURRENT_DIR}/tests/testdata"
   },

@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+from gws_core.config.param.select_param import SelectParam
 import os
 from typing import Final
 from gws_core import (
@@ -23,9 +24,9 @@ class BaktaDBTask(Task):
     })
 
     config_specs: Final[ConfigSpecs] = ConfigSpecs({
-        "db_type": StrParam(
+        "db_type": SelectParam(
             default_value="full",
-            allowed_values=["full", "light"],
+            options=["full", "light"],
             short_description="Database type to download"
         ),
         "force_update": BoolParam(

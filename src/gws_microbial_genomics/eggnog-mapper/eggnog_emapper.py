@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+from gws_core.config.param.select_param import SelectParam
 import os
 import shlex
 from pathlib import Path
@@ -47,8 +48,8 @@ class EggnogMapperTask(Task):
     })
 
     config_specs: Final[ConfigSpecs] = ConfigSpecs({
-        "itype": StrParam(default_value="proteins",
-                          allowed_values=["proteins", "CDS", "genome", "metagenome"],
+        "itype": SelectParam(default_value="proteins",
+                          options=["proteins", "CDS", "genome", "metagenome"],
                           short_description="Sequence type for eggNOG input"),
         "cpus": IntParam(default_value=25, min_value=1,
                          short_description="Number of CPU threads to use"),
